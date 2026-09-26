@@ -12,11 +12,11 @@ class PromptRequest(BaseModel):
 SYSTEM_PROMPT = """You are Cortex, an enterprise prompt optimizer. 
 Rewrite the prompt to be structured and efficient. Preserve core technical intent."""
 
-@app.get("/api/optimize")
+@app.get("/")
 def health_check():
     return {"status": "Cortex Optimizer Endpoint Active"}
 
-@app.post("/api/optimize")
+@app.post("/")
 def optimize_prompt(req: PromptRequest):
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
