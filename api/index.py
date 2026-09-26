@@ -106,7 +106,7 @@ def optimize_prompt(req: PromptRequest):
         client = Groq(api_key=api_key)
         start_time = time.time()
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": req.prompt}
