@@ -2,15 +2,9 @@ import os
 import time
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from dotenv import load_dotenv
 from groq import Groq
 
-load_dotenv()
-
 app = FastAPI()
-
-api_key = os.getenv("GROQ_API_KEY")
-client = Groq(api_key=api_key) if api_key else None
 
 class PromptRequest(BaseModel):
     prompt: str
@@ -18,13 +12,20 @@ class PromptRequest(BaseModel):
 SYSTEM_PROMPT = """You are Cortex, an enterprise prompt optimizer. 
 Rewrite the prompt to be structured and efficient. Preserve core technical intent."""
 
+@app.get("/")
+def read_root():
+    return {"status": "Cortex API Active"}
+
 @app.post("/api/optimize")
 def optimize_prompt(req: PromptRequest):
-    if not client:
-        raise HTTPException(status_code=500, detail="GROQ_API_KEY missing")
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY environment variable is missing on Vercel")
     
-    start_time = time.time()
     try:
+        client = Groq(api_key=api_key)
+        start_time = time.time()
+        
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
@@ -49,4 +50,4 @@ def optimize_prompt(req: PromptRequest):
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))

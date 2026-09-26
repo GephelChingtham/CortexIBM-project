@@ -1,2 +1,4 @@
-anthropic==0.30.1
-python-dotenv==1.0.0
+fastapi
+groq
+pydantic
+python-dotenv
