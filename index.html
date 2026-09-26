@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cortex: Prompt Enhancer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0; 
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container { 
+            max-width: 1200px; 
+            width: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        h1 { 
+            font-size: 2.5rem; 
+            font-weight: 900; 
+            margin-bottom: 10px; 
+            background: linear-gradient(135deg, #60a5fa, #a78bfa); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { 
+            color: #94a3b8; 
+            margin-bottom: 30px;
+            font-size: 1rem;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            color: #cbd5e1;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        textarea { 
+            width: 100%; 
+            padding: 15px; 
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            resize: vertical;
+            min-height: 150px;
+        }
+        textarea:focus { 
+            outline: none; 
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+        }
+        button { 
+            padding: 12px 40px; 
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(96, 165, 250, 0.3);
+        }
+        .results {
+            margin-top: 40px;
+            display: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        .results.show {
+            display: grid;
+        }
+        .result-section { 
+            display: flex;
+            flex-direction: column;
+        }
+        .result-label { 
+            color: #94a3b8; 
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .result-box { 
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            color: #e2e8f0;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            word-break: break-word;
+            flex: 1;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #94a3b8;
+        }
+        .loading.show {
+            display: block;
+        }
+        .spinner {
+            border: 2px solid rgba(96, 165, 250, 0.2);
+            border-top: 2px solid #60a5fa;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
+        .error.show {
+            display: block;
+        }
+        @media (max-width: 768px) {
+            .results {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cortex</h1>
+        <p class="subtitle">AI-Powered Prompt Enhancement</p>
+
+        <div class="form-group">
+            <label for="prompt">Paste Your Prompt</label>
+            <textarea id="prompt" placeholder="Enter your prompt here..."></textarea>
+        </div>
+
+        <button onclick="enhancePrompt()">Enhance Prompt</button>
+
+        <div class="error" id="error"></div>
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Enhancing your prompt...</p>
+        </div>
+
+        <div class="results" id="results">
+            <div class="result-section">
+                <div class="result-label">Original</div>
+                <div class="result-box" id="originalResult"></div>
+            </div>
+
+            <div class="result-section">
+                <div class="result-label">Enhanced</div>
+                <div class="result-box" id="enhancedResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function enhancePrompt() {
+            const prompt = document.getElementById('prompt').value.trim();
+            const errorEl = document.getElementById('error');
+            const loadingEl = document.getElementById('loading');
+            const resultsEl = document.getElementById('results');
+
+            errorEl.classList.remove('show');
+
+            if (!prompt) {
+                errorEl.textContent = 'Enter a prompt first';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            loadingEl.classList.add('show');
+            resultsEl.classList.remove('show');
+
+            try {
+                const response = await fetch('http://localhost:5000/enhance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to enhance');
+                }
+
+                document.getElementById('originalResult').textContent = data.original;
+                document.getElementById('enhancedResult').textContent = data.enhanced;
+
+                resultsEl.classList.add('show');
+            } catch (error) {
+                errorEl.textContent = 'Error: ' + error.message;
+                errorEl.classList.add('show');
+            } finally {
+                loadingEl.classList.remove('show');
+            }
+        }
+
+        document.getElementById('prompt').addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                enhancePrompt();
+            }
+        });
+    </script>
+</body>
+</html>
