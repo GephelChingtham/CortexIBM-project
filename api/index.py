@@ -101,44 +101,32 @@ def serve_ui():
 def optimize_prompt(req: PromptRequest):
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="GROQ_API_KEY is missing on Vercel environment variables.")
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY environment variable is not set on Vercel.")
     
     client = Groq(api_key=api_key)
     start_time = time.time()
     
-    # Active standard text models on Groq
-    models_to_try = [
-        "llama-3.1-8b-instant",
-        "llama-3.3-70b-versatile",
-        "mixtral-8x7b-32768"
-    ]
-    
-    last_err = None
-    for m in models_to_try:
-        try:
-            response = client.chat.completions.create(
-                model=m,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": req.prompt}
-                ],
-                temperature=0.2
-            )
-            enhanced = response.choices[0].message.content
-            latency_ms = int((time.time() - start_time) * 1000)
-            orig_tokens, opt_tokens = len(req.prompt.split()), len(enhanced.split())
-            savings_pct = round(((orig_tokens - opt_tokens) / max(orig_tokens, 1)) * 100, 1)
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": req.prompt}
+            ],
+            temperature=0.2
+        )
+        enhanced = response.choices[0].message.content
+        latency_ms = int((time.time() - start_time) * 1000)
+        orig_tokens, opt_tokens = len(req.prompt.split()), len(enhanced.split())
+        savings_pct = round(((orig_tokens - opt_tokens) / max(orig_tokens, 1)) * 100, 1)
 
-            return {
-                "optimized_prompt": enhanced,
-                "metrics": {
-                    "token_savings_pct": savings_pct,
-                    "latency_ms": latency_ms,
-                    "security_check": "CLEAN"
-                }
+        return {
+            "optimized_prompt": enhanced,
+            "metrics": {
+                "token_savings_pct": savings_pct,
+                "latency_ms": latency_ms,
+                "security_check": "CLEAN"
             }
-        except Exception as e:
-            last_err = str(e)
-            continue
-
-    raise HTTPException(status_code=500, detail=f"Groq API Error: {last_err}")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Groq API Call Failed: {str(e)}")
