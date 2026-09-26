@@ -13,23 +13,24 @@ SYSTEM_PROMPT = """You are Cortex, an enterprise prompt optimizer.
 Rewrite the prompt to be structured and efficient. Preserve core technical intent."""
 
 @app.get("/")
+@app.get("/api")
 def read_root():
     return {"status": "Cortex API Active"}
 
+@app.post("/optimize")
 @app.post("/api/optimize")
 def optimize_prompt(req: PromptRequest):
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise HTTPException(
             status_code=500, 
-            detail="GROQ_API_KEY is missing on Vercel. Add it under Settings -> Environment Variables."
+            detail="GROQ_API_KEY is missing on Vercel."
         )
     
     try:
         client = Groq(api_key=api_key)
         start_time = time.time()
         
-        # Using active Groq production endpoint
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
