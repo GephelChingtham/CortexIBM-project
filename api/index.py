@@ -106,17 +106,18 @@ def optimize_prompt(req: PromptRequest):
     client = Groq(api_key=api_key)
     start_time = time.time()
     
-    # Active, non-decommissioned Groq chat model slugs
-    WHITELIST_MODELS = [
+    # Active standard text models on Groq
+    models_to_try = [
         "llama-3.1-8b-instant",
-        "llama-3.3-70b-versatile"
+        "llama-3.3-70b-versatile",
+        "mixtral-8x7b-32768"
     ]
     
-    last_error = None
-    for model_name in WHITELIST_MODELS:
+    last_err = None
+    for m in models_to_try:
         try:
             response = client.chat.completions.create(
-                model=model_name,
+                model=m,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": req.prompt}
@@ -137,7 +138,7 @@ def optimize_prompt(req: PromptRequest):
                 }
             }
         except Exception as e:
-            last_error = str(e)
+            last_err = str(e)
             continue
 
-    raise HTTPException(status_code=500, detail=f"All whitelisted models failed. Last error: {last_error}")
+    raise HTTPException(status_code=500, detail=f"Groq API Error: {last_err}")
