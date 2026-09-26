@@ -106,35 +106,49 @@ def optimize_prompt(req: PromptRequest):
     client = Groq(api_key=api_key)
     start_time = time.time()
     
-    # Try models in order until one succeeds
-    candidate_models = ["llama-3.1-8b-instant", "llama3-8b-8192", "llama-3.3-70b-versatile"]
-    
-    last_error = None
-    for model_name in candidate_models:
-        try:
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": req.prompt}
-                ],
-                temperature=0.2
-            )
-            enhanced = response.choices[0].message.content
-            latency_ms = int((time.time() - start_time) * 1000)
-            orig_tokens, opt_tokens = len(req.prompt.split()), len(enhanced.split())
-            savings_pct = round(((orig_tokens - opt_tokens) / max(orig_tokens, 1)) * 100, 1)
-
-            return {
-                "optimized_prompt": enhanced,
-                "metrics": {
-                    "token_savings_pct": savings_pct,
-                    "latency_ms": latency_ms,
-                    "security_check": "CLEAN"
-                }
-            }
-        except Exception as e:
-            last_error = e
-            continue
+    # 1. Dynamically fetch available models directly from Groq API for this key
+    selected_model = None
+    try:
+        models_list = client.models.list()
+        available_ids = [m.id for m in models_list.data]
+        
+        # Priority order based on active key permissions
+        for preferred in ["llama-3.1-8b-instant", "llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma2-9b-it"]:
+            if preferred in available_ids:
+                selected_model = preferred
+                break
+        
+        if not selected_model and available_ids:
+            selected_model = available_ids[0]
             
-    raise HTTPException(status_code=500, detail=str(last_error))
+    except Exception:
+        # Fallback if list call fails
+        selected_model = "llama3-8b-8192"
+
+    if not selected_model:
+        selected_model = "llama3-8b-8192"
+
+    try:
+        response = client.chat.completions.create(
+            model=selected_model,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": req.prompt}
+            ],
+            temperature=0.2
+        )
+        enhanced = response.choices[0].message.content
+        latency_ms = int((time.time() - start_time) * 1000)
+        orig_tokens, opt_tokens = len(req.prompt.split()), len(enhanced.split())
+        savings_pct = round(((orig_tokens - opt_tokens) / max(orig_tokens, 1)) * 100, 1)
+
+        return {
+            "optimized_prompt": enhanced,
+            "metrics": {
+                "token_savings_pct": savings_pct,
+                "latency_ms": latency_ms,
+                "security_check": "CLEAN"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Model [{selected_model}] error: {str(e)}")
