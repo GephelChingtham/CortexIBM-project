@@ -106,24 +106,23 @@ def optimize_prompt(req: PromptRequest):
     client = Groq(api_key=api_key)
     start_time = time.time()
     
-    # 1. Dynamically fetch available models directly from Groq API for this key
     selected_model = None
     try:
         models_list = client.models.list()
-        available_ids = [m.id for m in models_list.data]
+        # Filter explicitly for chat models and ignore audio/whisper models
+        chat_models = [m.id for m in models_list.data if "whisper" not in m.id and "tts" not in m.id]
         
-        # Priority order based on active key permissions
-        for preferred in ["llama-3.1-8b-instant", "llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma2-9b-it"]:
-            if preferred in available_ids:
-                selected_model = preferred
+        priority_order = ["llama-3.1-8b-instant", "llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma2-9b-it"]
+        for p in priority_order:
+            if p in chat_models:
+                selected_model = p
                 break
         
-        if not selected_model and available_ids:
-            selected_model = available_ids[0]
+        if not selected_model and chat_models:
+            selected_model = chat_models[0]
             
     except Exception:
-        # Fallback if list call fails
-        selected_model = "llama3-8b-8192"
+        pass
 
     if not selected_model:
         selected_model = "llama3-8b-8192"
