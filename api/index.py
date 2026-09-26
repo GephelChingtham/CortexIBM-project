@@ -20,12 +20,16 @@ def read_root():
 def optimize_prompt(req: PromptRequest):
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="GROQ_API_KEY environment variable is missing on Vercel")
+        raise HTTPException(
+            status_code=500, 
+            detail="GROQ_API_KEY is missing on Vercel. Add it under Settings -> Environment Variables."
+        )
     
     try:
         client = Groq(api_key=api_key)
         start_time = time.time()
         
+        # Using active Groq production endpoint
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
@@ -34,6 +38,7 @@ def optimize_prompt(req: PromptRequest):
             ],
             temperature=0.2
         )
+        
         enhanced = response.choices[0].message.content
         latency_ms = int((time.time() - start_time) * 1000)
         
@@ -50,4 +55,4 @@ def optimize_prompt(req: PromptRequest):
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Groq API Error: {str(e)}")
