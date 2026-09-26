@@ -9,7 +9,7 @@ app = FastAPI()
 class PromptRequest(BaseModel):
     prompt: str
 
-SYSTEM_PROMPT = "You are Cortex, an enterprise prompt optimizer. Rewrite the prompt to be structured and efficient. Preserve core technical intent."
+SYSTEM_PROMPT = "You are Cortex, an enterprise prompt optimizer. Rewrite the prompt to be structured, concise, and production-ready. Preserve core technical intent while cutting fluff."
 
 HTML_LAYOUT = """<!DOCTYPE html>
 <html lang="en">
@@ -106,7 +106,7 @@ def optimize_prompt(req: PromptRequest):
         client = Groq(api_key=api_key)
         start_time = time.time()
         response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": req.prompt}
