@@ -106,12 +106,10 @@ def optimize_prompt(req: PromptRequest):
     client = Groq(api_key=api_key)
     start_time = time.time()
     
-    # Strictly whitelist standard production Groq chat models
+    # Active, non-decommissioned Groq chat model slugs
     WHITELIST_MODELS = [
         "llama-3.1-8b-instant",
-        "llama-3.3-70b-versatile",
-        "llama3-8b-8192",
-        "llama3-70b-8192"
+        "llama-3.3-70b-versatile"
     ]
     
     last_error = None
