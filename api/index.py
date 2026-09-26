@@ -106,48 +106,40 @@ def optimize_prompt(req: PromptRequest):
     client = Groq(api_key=api_key)
     start_time = time.time()
     
-    selected_model = None
-    try:
-        models_list = client.models.list()
-        # Filter explicitly for chat models and ignore audio/whisper models
-        chat_models = [m.id for m in models_list.data if "whisper" not in m.id and "tts" not in m.id]
-        
-        priority_order = ["llama-3.1-8b-instant", "llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma2-9b-it"]
-        for p in priority_order:
-            if p in chat_models:
-                selected_model = p
-                break
-        
-        if not selected_model and chat_models:
-            selected_model = chat_models[0]
-            
-    except Exception:
-        pass
+    # Strictly whitelist standard production Groq chat models
+    WHITELIST_MODELS = [
+        "llama-3.1-8b-instant",
+        "llama-3.3-70b-versatile",
+        "llama3-8b-8192",
+        "llama3-70b-8192"
+    ]
+    
+    last_error = None
+    for model_name in WHITELIST_MODELS:
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": req.prompt}
+                ],
+                temperature=0.2
+            )
+            enhanced = response.choices[0].message.content
+            latency_ms = int((time.time() - start_time) * 1000)
+            orig_tokens, opt_tokens = len(req.prompt.split()), len(enhanced.split())
+            savings_pct = round(((orig_tokens - opt_tokens) / max(orig_tokens, 1)) * 100, 1)
 
-    if not selected_model:
-        selected_model = "llama3-8b-8192"
-
-    try:
-        response = client.chat.completions.create(
-            model=selected_model,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": req.prompt}
-            ],
-            temperature=0.2
-        )
-        enhanced = response.choices[0].message.content
-        latency_ms = int((time.time() - start_time) * 1000)
-        orig_tokens, opt_tokens = len(req.prompt.split()), len(enhanced.split())
-        savings_pct = round(((orig_tokens - opt_tokens) / max(orig_tokens, 1)) * 100, 1)
-
-        return {
-            "optimized_prompt": enhanced,
-            "metrics": {
-                "token_savings_pct": savings_pct,
-                "latency_ms": latency_ms,
-                "security_check": "CLEAN"
+            return {
+                "optimized_prompt": enhanced,
+                "metrics": {
+                    "token_savings_pct": savings_pct,
+                    "latency_ms": latency_ms,
+                    "security_check": "CLEAN"
+                }
             }
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Model [{selected_model}] error: {str(e)}")
+        except Exception as e:
+            last_error = str(e)
+            continue
+
+    raise HTTPException(status_code=500, detail=f"All whitelisted models failed. Last error: {last_error}")
